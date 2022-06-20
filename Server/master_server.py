@@ -2,6 +2,7 @@ from ast import match_case
 import socket
 from threading import Thread
 import random
+from network import NetworkClient
 from network import MessageID
 from game_server import GameServer
 import signal
@@ -9,23 +10,6 @@ import sys
 import json
 import time
 
-
-class NetworkClient:
-
-    def __init__(self, host, port):
-        self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server = host
-        self.port = port
-        self.addr = (self.server, self.port)
-        self.is_connected = False
-        self.connect()
-
-    def connect(self):
-        try:
-            self.client.connect(self.addr)
-            is_connected = True
-        except:
-            pass
 
 
 class MasterServer():
