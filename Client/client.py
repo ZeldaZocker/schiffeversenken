@@ -53,6 +53,10 @@ class Client():
         pass
 
     def handle_failure(self, message="Received unexpected network package."):
+        try:
+            self.net.client.close()
+        except:
+            pass
         print(message)
         input("Press Enter to exit.")
         sys.exit()
