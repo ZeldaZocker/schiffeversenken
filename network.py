@@ -41,6 +41,7 @@ class MessageID(Enum):
     FAIL = auto()
     ADD_QUEUE = auto()
     LEAVE_QUEUE = auto()
+    DISCONNECT = auto()
     GAMESERVER = auto()
     SHOOT = auto()
     SHOOT_RESULT = auto()
@@ -50,3 +51,4 @@ class MessageID(Enum):
     START_PLACE_PHASE = auto()
     END_PLACE_PHASE = auto()
     YOUR_TURN = auto()
+    EMPTY = auto()
