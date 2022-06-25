@@ -29,11 +29,13 @@ class NetworkClient:
         
 
     def connect(self):
+        self.client.settimeout(3)
         try:
             self.client.connect(self.addr)
             self.is_connected = True
         except socket.error as e:
-            print(e)
+            print("[NETWORK]", e)
+        self.client.settimeout(30)
 
     def send(self, action, client_id = None, payload = None):
         try:
