@@ -1,4 +1,3 @@
-from logging import root
 import sys
 from tkinter.ttk import Labelframe
 
@@ -6,12 +5,12 @@ print("Running Python version: " + str(sys.version))
 from base64 import encode
 import socket
 from threading import Thread
-import json
 import time
 import signal
 
 from network import NetworkClient
 from network import MessageID
+from board import *
 
 from tkinter import *
 from tkinter import messagebox
@@ -23,6 +22,8 @@ class GameWindow(Thread):
     def __init__(self, client):
         Thread.__init__(self)
         self.client = client
+        self.own_buttons = {}
+        self.enemy_buttons = {}
     
     def run(self):
         self.root = Tk()
@@ -87,8 +88,9 @@ class GameWindow(Thread):
                 frame.grid(row=y, column=x, padx=1, pady=1)
 
                 cmd = lambda x=x, y=y: client.shoot(x,y)
-                print(x,y)
+                #print(x,y)
                 btn = Button(frame, bg="#33ccff", textvariable=btnString, command=cmd)
+                self.enemy_buttons[(x,y)] = btn
                 btn.grid(sticky="wens")
                 #btn.grid(row=i, column=z)
                 button_list.append(btn)
@@ -110,12 +112,23 @@ class GameWindow(Thread):
                 frame.grid(row=y, column=x, padx=1, pady=1)
 
                 cmd = lambda x=x, y=y: client.shoot(x,y)
-                print(x,y)
-                btn = Button(frame, bg="#33ccff", textvariable=btnString, command=cmd, state = DISABLED)
+                #print(x,y)
+                btn = Button(frame, bg="#33ccff", textvariable=btnString, state = DISABLED)
+                self.own_buttons[(x,y)] = btn
                 btn.grid(sticky="wens")
                 #btn.grid(row=i, column=z)
                 button_list.append(btn)
         #self.board_frame.grid_remove()
+
+        board = GameBoard()
+        board.gernerate_board()
+
+        for ship in board.ships:
+            print(f"Enable button on {ship.ship_type}")
+            for ship_field in ship.fields:
+                print(f"Enable button on {ship_field.x} {ship_field.y}")
+                self.own_buttons[(ship_field.x, ship_field.y)].configure(bg="#FF0000")
+                self.own_buttons[(ship_field.x, ship_field.y)].grid()
 
         self.root.mainloop()
 
