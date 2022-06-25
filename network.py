@@ -6,6 +6,9 @@ import time
 
 class NetworkClient:
 
+    client_id = None
+    last_ping = 0
+
     def __init__(self, host = socket.gethostname(), port = 20550, client_socket = None, client_id = None):
         if not client_socket:
             self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -13,7 +16,6 @@ class NetworkClient:
             self.port = port
             self.addr = (self.host, self.port)
             self.is_connected = False
-            self.connect()
         else:
             self.client = client_socket
             self.addr = client_socket.getpeername()
@@ -21,6 +23,8 @@ class NetworkClient:
             self.port = self.addr[1]
             self.is_connected = True
             self.last_ping = time.time()
+        if client_id:
+            self.client_id = client_id            
         self.client.settimeout(30)
         
 

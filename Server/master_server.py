@@ -15,9 +15,12 @@ import uuid
 
 
 class MasterServer():
+    connected_clients = []
+    client_threads = []
     client_queue = []
     game_servers = []
     PREFIX = "[MASTER]"
+    PLAYERS_TO_START_GAMESERVER = 2
 
     def __init__(self, host, port):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -30,16 +33,18 @@ class MasterServer():
         self.is_running = True
         self.socket.bind(self.addr)
         self.socket.listen(30)
-        self.thread = Thread(target=self.accept_new_connections, args=())
-        self.thread.start()
+        self.connection_handle_thread = Thread(target=self.accept_new_connections, daemon=True, args=())
+        self.connection_handle_thread.start()
+        self.ping_thread = Thread(target=self.ping_clients, args=())
+        self.ping_thread.start()
         self.mainloop()
 
     def mainloop(self):
         while 1:
-            print(self.PREFIX, len(self.client_queue))
-            if len(self.client_queue) >= 2:
+            print(self.PREFIX, len(self.connected_clients), len(self.client_queue))
+            if len(self.client_queue) >= self.PLAYERS_TO_START_GAMESERVER:
                 addr = self.initGameServer()
-                for i in range(2):
+                for i in range(self.PLAYERS_TO_START_GAMESERVER):
                     network_client = self.client_queue.pop(0)
                     network_client.send(MessageID.GAMESERVER.value, payload=addr)
                     try:
@@ -54,10 +59,16 @@ class MasterServer():
                 client_socket, addr = self.socket.accept()
                 print(f"{self.PREFIX} Got connection from ip: {addr[0]} {addr[1]}")
                 network_client = NetworkClient(client_socket=client_socket)
-                Thread(target=self.handle_client, args=(network_client,)).start()
-                network_client.send(MessageID.OK.value, payload=str(uuid.uuid4()))
+                network_client.connect()
+                self.connected_clients.append(network_client)
+                thread = Thread(target=self.handle_client, daemon=True, args=(network_client,))
+                self.client_threads.append(thread)
+                thread.start()
+                id = str(uuid.uuid4())
+                network_client.client_id = id
+                network_client.send(MessageID.OK.value, payload=id)
             except socket.error:
-                print("Socket error. Server closing?")
+                print(f"{self.PREFIX} Socket error while checking new connections. Server closing?")
                 return
             time.sleep(1)
             
@@ -67,12 +78,12 @@ class MasterServer():
             while self.is_running:
                 print(f"{self.PREFIX} loop client handle")
                 msg = network_client.recv()
-                print(f"{self.PREFIX} Received msg: {msg}")
+                print(f"{self.PREFIX} \"{MessageID(msg.get('action'))}\" received!")
                 match msg.get("action"):
                     case MessageID.ADD_QUEUE.value:
                         print(f"{self.PREFIX} Adding client to queue")
                         self.client_queue.append(network_client)
-                        network_client.send(MessageID.OK.value)
+                        network_client.send(MessageID.ADD_QUEUE.value)
                     case MessageID.LEAVE_QUEUE.value:
                         self.client_queue.remove(network_client)
                         network_client.send(MessageID.OK.value)
@@ -90,18 +101,32 @@ class MasterServer():
                     case _:
                         print(f"{self.PREFIX} Package \"{MessageID(msg.get('action'))}\" received!")
                 if network_client.last_ping + 10 < time.time():
-                    network_client.send(MessageID.OK.value)
+                    network_client.send(MessageID.PING.value)
                     print(f"Ping {network_client.client_id}")
-
+                time.sleep(0.1)
         except socket.error:
             print(f"{self.PREFIX} Client disconnected.")
             self.purge_client(network_client)
+
+    def ping_clients(self):
+        while self.is_running:
+            for client in self.connected_clients:
+                try:
+                    print(f"{self.PREFIX} Ping {client.client_id if client.client_id else 'Unknown ID'}")
+                    client.send(MessageID.PING.value)
+                except socket.error as e:
+                    print(e)
+            time.sleep(5)
 
     def purge_client(self, network_client):
         try:
             self.client_queue.remove(network_client)
         except:
             pass
+        try:
+            self.connected_clients.remove(network_client)
+        except:
+            pass        
         try:
             network_client.send(MessageID.DISCONNECT.value)
         except:
@@ -116,19 +141,23 @@ class MasterServer():
         host = socket.gethostname()
         addr = (host, port)
         game_server = GameServer(addr)
-        Thread(target=game_server.start, args=()).start()
+        Thread(target=game_server.start, daemon=True, args=()).start()
         self.game_servers.append(game_server)
         return addr
 
     def signal_handler(self, sig, frame):
+        print(f"{self.PREFIX} You pressed Ctrl+C!")
         self.is_running = False
         self.socket.close()
-        for c in self.client_queue:
-            c.close()
+        for c in self.connected_clients:
+            c.client.close()
             print(f"{self.PREFIX} Close connection to client.")
         for game_server in self.game_servers:
             game_server.stop()
-        print(f"{self.PREFIX} You pressed Ctrl+C!")
+        self.connection_handle_thread.join()
+        self.ping_thread.join()
+        for thr in self.client_threads:
+            thr.join()
         sys.exit(0)
 
 
