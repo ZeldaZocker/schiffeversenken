@@ -1,5 +1,6 @@
 from logging import root
 import sys
+from tkinter.ttk import Labelframe
 
 print("Running Python version: " + str(sys.version))
 from base64 import encode
@@ -17,6 +18,8 @@ from tkinter import messagebox
 
 class GameWindow(Thread):
     is_destroyed = False
+    DEFAULT_BG = "#404040"
+
     def __init__(self, client):
         Thread.__init__(self)
         self.client = client
@@ -27,26 +30,48 @@ class GameWindow(Thread):
         self.root.geometry("620x680")
         self.root.resizable(False, False)
         self.root.protocol("WM_DELETE_WINDOW", self.quit)
+        self.root.configure(bg=self.DEFAULT_BG)
 
-        Frame(self.root, width=70, height=60, highlightbackground="yellow", highlightthickness=4).grid(row=0, column=0)
-        self.top_frame = Frame(self.root, width=60*8, height=60, highlightbackground="green", highlightthickness=2)
-        self.top_frame.grid(row=0, column=1)
-        self.top_frame.grid_propagate(False)
+        Frame(self.root, width=70, height=60, highlightbackground="yellow", highlightthickness=4, bg=self.DEFAULT_BG).grid(row=0, column=0, rowspan=2)
+
+        self.button_frame = Frame(self.root, width=60*8, height=40, highlightbackground="red", highlightthickness=2, bg=self.DEFAULT_BG)
+        self.button_frame.grid(row=0, column=1)
+        self.button_frame.grid_propagate(False)
         
-        self.top_frame.columnconfigure(0, weight=1, pad=30)
-        self.top_frame.rowconfigure(0,weight=1, pad=30)
+        self.button_frame.columnconfigure(0, weight=1, pad=30)
+        self.button_frame.rowconfigure(0,weight=1, pad=30)
 
-        btnString = StringVar(self.top_frame, "Join Server")
-        self.join_queue_button = Button(self.top_frame, bg="gray", textvariable=btnString, command=self.join_server_btn)
+        text_frame = Frame(self.root, width=60*8, height=20, bg=self.DEFAULT_BG)
+        text_frame.grid(row=1, column=1)
+        text_frame.grid_propagate(False)
+        
+        text_frame.columnconfigure(0, weight=1, pad=30)
+        text_frame.rowconfigure(0,weight=1, pad=30)
+
+        self.text = Label(text_frame, text="You're not supposed to see this!",fg="red", bg=self.DEFAULT_BG)
+               
+        Frame(self.root, width=70, height=60, highlightbackground="yellow", highlightthickness=4, bg=self.DEFAULT_BG).grid(row=0, column=2, rowspan=2)
+
+        
+        btnString = StringVar(self.button_frame, "Join Server")
+        self.join_server_button = Button(self.button_frame, bg="gray", textvariable=btnString, command=self.join_server_btn)
+        self.join_server_button.grid(sticky="wens")
+        self.join_server_button.grid_remove()
+
+        btnString = StringVar(self.button_frame, "Join Queue")
+        self.join_queue_button = Button(self.button_frame, bg="gray", textvariable=btnString, command=self.join_queue_btn)
         self.join_queue_button.grid(sticky="wens")
-        
-        
-        btnString = StringVar(self.top_frame, "Join Queue")
-        self.join_queue_button = Button(self.top_frame, bg="gray", textvariable=btnString, command=self.join_queue_btn)
-        self.join_queue_button.grid(sticky="wens")
-       
-        Frame(self.root, width=70, height=60, highlightbackground="yellow", highlightthickness=4).grid(row=0, column=2)
+        self.join_queue_button.grid_remove()
 
+        btnString = StringVar(self.button_frame, "Leave Queue")
+        self.leave_queue_button = Button(self.button_frame, bg="gray", textvariable=btnString, command=self.leave_queue_btn)
+        self.leave_queue_button.grid(sticky="wens")
+        self.leave_queue_button.grid_remove()
+
+        self.join_server_button.grid()
+
+        
+        
 
         button_list = []
         z = 0
@@ -74,10 +99,22 @@ class GameWindow(Thread):
         self.root.mainloop()
 
     def join_server_btn(self):
-        pass
+        if not self.client.connect_to_master():
+            self.text.config(text="Error connecting to server!", fg="red")
+            self.text.pack()
+            return
+        thr = Thread(target=self.client.handle_message, args=())
+        thr.start()
+        self.join_server_button.grid_remove()
+        self.join_queue_button.grid()
         
     def join_queue_btn(self):
         self.client.join_queue()
+        self.join_queue_button.grid_remove()
+        self.leave_queue_button.grid()
+
+    def leave_queue_btn(self):
+        pass
 
     def quit(self):
         self.root.quit()
@@ -94,31 +131,34 @@ class Client():
 
     def start(self):
         self.is_running = True
-        self.connect_to_master()
-        thr = Thread(target=self.handle_message, args=())
-        thr.start()
-        while self.network_client.is_connected and self.is_running:
+        while self.is_running:
             time.sleep(1)
 
     def connect_to_master(self):
         self.network_client = NetworkClient(socket.gethostname(), 20550)
         self.network_client.connect()
         if not self.network_client.is_connected:
-            self.handle_failure("Error connecting to master server. (Step 1)")
+            print(f"{self.PREFIX} Error connecting to master server. (Step 1)")
+            return False
         message = self.network_client.recv()
         if not message.get('action') == MessageID.OK.value:
-            self.handle_failure("Error connecting to master server. (Step 2)")
+            print(f"{self.PREFIX} Error connecting to master server. (Step 2)")
+            self.purge_client()
+            return False
         self.network_client.client_id = message.get('payload')
         print(self.PREFIX, self.network_client.client_id)
         print(f"{self.PREFIX} Server accepted connection.")
+        return True
 
     def join_queue(self):
         self.network_client.send(MessageID.ADD_QUEUE.value)
         joined_queue_time = time.time()
         while not self.joined_queue:
             if time.time() - joined_queue_time > 10:
-                self.handle_failure("Error joining queue.")
+                print(f"{self.PREFIX} Error joining queue.")
+                return False
         print(f"{self.PREFIX} Joined queue.")
+        return True
 
     def ping(self):
         self.network_client.send(MessageID.PING.value)
@@ -177,7 +217,7 @@ class Client():
         if not self.game_window.is_destroyed:
             self.game_window.quit()
         print(self.PREFIX, message)
-        input("Press Enter to exit.")
+        input(f"{self.PREFIX} Press Enter to exit.")
         sys.exit()
 
     def purge_client(self):
