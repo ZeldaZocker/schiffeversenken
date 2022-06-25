@@ -27,32 +27,27 @@ class GameWindow(Thread):
     def run(self):
         self.root = Tk()
         self.root.title("Schiffe Versenken von Noah")
-        self.root.geometry("620x680")
+        self.root.geometry(f"{620*2+70}x680")
         self.root.resizable(False, False)
         self.root.protocol("WM_DELETE_WINDOW", self.quit)
         self.root.configure(bg=self.DEFAULT_BG)
 
-        Frame(self.root, width=70, height=60, highlightbackground="yellow", highlightthickness=4, bg=self.DEFAULT_BG).grid(row=0, column=0, rowspan=2)
-
         self.button_frame = Frame(self.root, width=60*8, height=40, highlightbackground="red", highlightthickness=2, bg=self.DEFAULT_BG)
-        self.button_frame.grid(row=0, column=1)
+        self.button_frame.grid(row=0, column=0, columnspan=3)
         self.button_frame.grid_propagate(False)
         
         self.button_frame.columnconfigure(0, weight=1, pad=30)
         self.button_frame.rowconfigure(0,weight=1, pad=30)
 
         text_frame = Frame(self.root, width=60*8, height=20, bg=self.DEFAULT_BG)
-        text_frame.grid(row=1, column=1)
+        text_frame.grid(row=1, column=0, columnspan=3)
         text_frame.grid_propagate(False)
         
         text_frame.columnconfigure(0, weight=1, pad=30)
         text_frame.rowconfigure(0,weight=1, pad=30)
 
-        self.text = Label(text_frame, text="You're not supposed to see this!",fg="red", bg=self.DEFAULT_BG)
-               
-        Frame(self.root, width=70, height=60, highlightbackground="yellow", highlightthickness=4, bg=self.DEFAULT_BG).grid(row=0, column=2, rowspan=2)
+        self.text = Label(text_frame, text="You're not supposed to see this!", font='Helvetica 9 bold', fg="red", bg=self.DEFAULT_BG)
 
-        
         btnString = StringVar(self.button_frame, "Join Server")
         self.join_server_button = Button(self.button_frame, bg="gray", textvariable=btnString, command=self.join_server_btn)
         self.join_server_button.grid(sticky="wens")
@@ -70,19 +65,22 @@ class GameWindow(Thread):
 
         self.join_server_button.grid()
 
-        
+
+               
+        spacer = Frame(self.root, width=70, height=60, highlightbackground="yellow", highlightthickness=4, bg=self.DEFAULT_BG).grid(row=0, column=1, rowspan=3)
+
         
 
         button_list = []
         z = 0
-        self.board_frame = Frame(self.root, width=630, height=630, highlightbackground="red", highlightthickness=2)
-        self.board_frame.grid_propagate(False)
-        self.board_frame.grid(row=1, column=1, padx=0, pady=0)
+        self.enemy_board_frame = Frame(self.root, width=620, height=620, highlightbackground="red", highlightthickness=2)
+        self.enemy_board_frame.grid_propagate(False)
+        self.enemy_board_frame.grid(row=2, column=0, padx=0, pady=0)
 
         for y in range(10):
             for x in range(10):
-                btnString = StringVar(self.board_frame, f"{x} {y}")
-                frame = Frame(self.board_frame, width=60, height=60, highlightbackground="blue", highlightthickness=2)
+                btnString = StringVar(self.enemy_board_frame, f"{x} {y}")
+                frame = Frame(self.enemy_board_frame, width=60, height=60, highlightbackground="blue", highlightthickness=2)
                 frame.grid_propagate(False)
                 frame.columnconfigure(0, weight=1, pad=30)
                 frame.rowconfigure(0,weight=1, pad=30)
@@ -94,7 +92,30 @@ class GameWindow(Thread):
                 btn.grid(sticky="wens")
                 #btn.grid(row=i, column=z)
                 button_list.append(btn)
-        self.board_frame.grid_remove()
+        #self.board_frame.grid_remove()
+
+        button_list = []
+        z = 0
+        self.own_board_frame = Frame(self.root, width=620, height=620, highlightbackground="red", highlightthickness=2)
+        self.own_board_frame.grid_propagate(False)
+        self.own_board_frame.grid(row=2, column=2, padx=0, pady=0)
+
+        for y in range(10):
+            for x in range(10):
+                btnString = StringVar(self.own_board_frame, f"{x} {y}")
+                frame = Frame(self.own_board_frame, width=60, height=60, highlightbackground="blue", highlightthickness=2)
+                frame.grid_propagate(False)
+                frame.columnconfigure(0, weight=1, pad=30)
+                frame.rowconfigure(0,weight=1, pad=30)
+                frame.grid(row=y, column=x, padx=1, pady=1)
+
+                cmd = lambda x=x, y=y: client.shoot(x,y)
+                print(x,y)
+                btn = Button(frame, bg="#33ccff", textvariable=btnString, command=cmd, state = DISABLED)
+                btn.grid(sticky="wens")
+                #btn.grid(row=i, column=z)
+                button_list.append(btn)
+        #self.board_frame.grid_remove()
 
         self.root.mainloop()
 
@@ -107,9 +128,16 @@ class GameWindow(Thread):
         thr.start()
         self.join_server_button.grid_remove()
         self.join_queue_button.grid()
+        self.text.config(text="Joined server.", fg="green")
+        self.text.pack()
         
     def join_queue_btn(self):
-        self.client.join_queue()
+        if not self.client.join_queue():
+            self.text.config(text="Error joining queue!", fg="red")
+            self.text.pack()
+            return
+        self.text.config(text="Joined queue.", fg="green")
+        self.text.pack()
         self.join_queue_button.grid_remove()
         self.leave_queue_button.grid()
 
