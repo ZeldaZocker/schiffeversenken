@@ -53,18 +53,55 @@ class NetworkClient:
 
     def recv(self, size=2048):
         msg = self.client.recv(size).decode()
-        val = {"action": MessageID.FAIL.value}
-        if not msg: return {"action": MessageID.EMPTY.value}
-        val["action"] = json.loads(msg)["action"]
-        try:
-            val["payload"] = json.loads(msg)["payload"]
-        except KeyError:
-            pass
-        try:
-            val["client_id"] = json.loads(msg)["client_id"]
-        except KeyError:
-            pass
-        return val
+        jsons = self.splice_json(msg)
+        msgs = []
+        # [ {"action": 3, {"payload:" (1,2)}, {"action": 3, {"payload:" (1,2)} ]
+        for single_msg in jsons:
+            val = {"action": MessageID.FAIL.value}
+            if not single_msg:
+                val = {"action": MessageID.EMPTY.value}
+                msgs.append(val)
+                continue
+            val["action"] = json.loads(single_msg)["action"]
+            try:
+                val["payload"] = json.loads(single_msg)["payload"]
+            except KeyError:
+                pass
+            try:
+                val["client_id"] = json.loads(single_msg)["client_id"]
+            except KeyError:
+                pass
+            msgs.append(val)
+        return msgs
+
+    def position_of_equal_open_close(self, txt: str):
+        parenthesis = 0
+
+        i = 0
+        # Strip is required because the first char needs to be an {
+        for entry in txt.strip():
+            if i > 0 and parenthesis == 0:
+                return i
+            if entry == '{':
+                parenthesis += 1
+            elif entry == '}':
+                parenthesis -= 1
+
+            i += 1
+
+    def splice_json(self, input_text: str):
+        copy_of_text = input_text.strip()
+
+        arr = []
+        pos = 0
+
+        while pos is not None:
+            pos = self.position_of_equal_open_close(copy_of_text)
+            text = copy_of_text[0:pos]
+            arr.append(text)
+            copy_of_text = copy_of_text[pos:]
+
+        return arr
 
 
 class MessageID(Enum):

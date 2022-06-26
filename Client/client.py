@@ -36,11 +36,11 @@ class Client():
             print(f"{self.PREFIX} Error connecting to master server. (Step 1)")
             return False
         message = self.network_client.recv()
-        if not message.get('action') == MessageID.OK.value:
+        if not message[0].get('action') == MessageID.OK.value:
             print(f"{self.PREFIX} Error connecting to master server. (Step 2)")
             self.purge_client()
             return False
-        self.network_client.client_id = message.get('payload')
+        self.network_client.client_id = message[0].get('payload')
         print(self.PREFIX, self.network_client.client_id)
         print(f"{self.PREFIX} Server accepted connection.")
         return True
@@ -58,65 +58,67 @@ class Client():
     def ping(self):
         self.network_client.send(MessageID.PING.value)
 
-    def wait_for_message(self):
-        return self.network_client.recv()
-
     def join_game_server(self, msg):
         self.network_client.send(MessageID.DISCONNECT.value, client_id=self.network_client.client_id)
         self.network_client.client.close()
         self.network_client = NetworkClient(msg.get('payload')[0], msg.get('payload')[1])
         self.network_client.connect()
-        msg = self.network_client.recv()
-        if not msg.get("action") == MessageID.OK.value:
-            self.handle_failure("Error while joining game server.")
-        self.network_client.client_id = msg.get('payload')
-        print(f"{self.PREFIX} Connected to gameserver!!")
-        self.is_ingame = True
+        msgs = self.network_client.recv()
+        for msg in msgs:
+            print(msg)
+            if msg.get("action") == MessageID.OK.value:
+                self.network_client.client_id = msg.get('payload')
+                print(f"{self.PREFIX} Connected to gameserver!!")
+                self.is_ingame = True
+                return
+        self.handle_failure("Error while joining game server.")
+        
 
     def handle_message(self):
         try:
             while self.network_client.is_connected and self.is_running:
-                msg = self.network_client.recv()
-                if not msg:
-                    print(f"{self.PREFIX} Server gone?")
-                    self.network_client.client.close()
-                    return
-                print(f"{self.PREFIX} \"{MessageID(msg.get('action'))}\" received!")
-                match msg.get("action"):
-                    case MessageID.PING.value:
-                        self.network_client.last_ping = time.time()
-                        self.network_client.send(MessageID.PING.value)
-                        #print(f"{self.PREFIX} Pong {self.network_client.client_id}")
-                    case MessageID.GAMESERVER.value:
-                        self.join_game_server(msg)
-                    case MessageID.ADD_QUEUE.value:
-                        self.joined_queue = True
-                    case MessageID.EMPTY.value:
-                            print(f"{self.PREFIX} Empty package case.")
-                            self.handle_failure("Server gone. Purging.")
-                    case MessageID.DISCONNECT.value:
-                        self.handle_failure("Received disconnect package. Purging.")
-                    case MessageID.SHOOT.value:
-                        x = msg.get("payload").get("x")
-                        y = msg.get("payload").get("y")
-                        ship_hit = False
-                        for ship in self.board.ships:
-                            if ship_hit: break
-                            for field in ship.fields:
+                msgs = self.network_client.recv()
+                for msg in msgs:
+                    if not msg:
+                        print(f"{self.PREFIX} Server gone?")
+                        self.network_client.client.close()
+                        return
+                    print(f"{self.PREFIX} \"{MessageID(msg.get('action'))}\" received!")
+                    match msg.get("action"):
+                        case MessageID.PING.value:
+                            self.network_client.last_ping = time.time()
+                            self.network_client.send(MessageID.PING.value)
+                            #print(f"{self.PREFIX} Pong {self.network_client.client_id}")
+                        case MessageID.GAMESERVER.value:
+                            self.join_game_server(msg)
+                        case MessageID.ADD_QUEUE.value:
+                            self.joined_queue = True
+                        case MessageID.EMPTY.value:
+                                print(f"{self.PREFIX} Empty package case.")
+                                self.handle_failure("Server gone. Purging.")
+                        case MessageID.DISCONNECT.value:
+                            self.handle_failure("Received disconnect package. Purging.")
+                        case MessageID.SHOOT.value:
+                            x = msg.get("payload").get("x")
+                            y = msg.get("payload").get("y")
+                            ship_hit = False
+                            for ship in self.board.ships:
                                 if ship_hit: break
-                                if field.x == x and field.y == y:
-                                    self.network_client.send(MessageID.SHOOT_RESULT.value, payload={"result": FieldState.SHIP.value})
-                                    ship_hit = True
-                                    break
-                        if not ship_hit:
-                            self.network_client.send(MessageID.SHOOT_RESULT.value, payload={"result": FieldState.SHOT.value})
-                    case MessageID.SHOOT_RESULT.value:
-                        result = msg.get("payload").get("result")
-                        if result == FieldState.SHIP.value:
-                            print(f"{self.PREFIX} Ship hit. Yeah!")
-                            # TODO: Logic
-                    case _:
-                        print(f"{self.PREFIX} Package \"{MessageID(msg.get('action'))}\" received!")
+                                for field in ship.fields:
+                                    if ship_hit: break
+                                    if field.x == x and field.y == y:
+                                        self.network_client.send(MessageID.SHOOT_RESULT.value, payload={"result": FieldState.SHIP.value})
+                                        ship_hit = True
+                                        break
+                            if not ship_hit:
+                                self.network_client.send(MessageID.SHOOT_RESULT.value, payload={"result": FieldState.SHOT.value})
+                        case MessageID.SHOOT_RESULT.value:
+                            result = msg.get("payload").get("result")
+                            if result == FieldState.SHIP.value:
+                                print(f"{self.PREFIX} Ship hit. Yeah!")
+                                # TODO: Logic
+                        case _:
+                            print(f"{self.PREFIX} Package \"{MessageID(msg.get('action'))}\" received!")
                 if self.network_client.last_ping + 10 < time.time():
                     self.network_client.send(MessageID.PING.value)
                 time.sleep(0.1)

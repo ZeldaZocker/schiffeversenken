@@ -82,29 +82,30 @@ class MasterServer():
         try:
             while self.is_running:
                 print(f"{self.PREFIX} loop client handle")
-                msg = network_client.recv()
-                print(f"{self.PREFIX} \"{MessageID(msg.get('action'))}\" received!")
-                match msg.get("action"):
-                    case MessageID.ADD_QUEUE.value:
-                        print(f"{self.PREFIX} Adding client to queue")
-                        self.client_queue.append(network_client)
-                        network_client.send(MessageID.ADD_QUEUE.value)
-                    case MessageID.LEAVE_QUEUE.value:
-                        self.client_queue.remove(network_client)
-                        network_client.send(MessageID.OK.value)
-                    case MessageID.PING.value:
-                        network_client.last_ping = time.time()
-                    case MessageID.DISCONNECT.value:
-                        client_id = msg.get("client_id")
-                        print(f"{self.PREFIX} Client ({client_id}) disconnected by itself.")
-                        self.purge_client(network_client)
-                        break
-                    case MessageID.EMPTY.value:
-                        print(f"{self.PREFIX} Client disconnected by itself.")
-                        self.purge_client(network_client)
-                        break
-                    case _:
-                        print(f"{self.PREFIX} Package \"{MessageID(msg.get('action'))}\" received!")
+                msgs = network_client.recv()
+                for msg in msgs:
+                    print(f"{self.PREFIX} \"{MessageID(msg.get('action'))}\" received!")
+                    match msg.get("action"):
+                        case MessageID.ADD_QUEUE.value:
+                            print(f"{self.PREFIX} Adding client to queue")
+                            self.client_queue.append(network_client)
+                            network_client.send(MessageID.ADD_QUEUE.value)
+                        case MessageID.LEAVE_QUEUE.value:
+                            self.client_queue.remove(network_client)
+                            network_client.send(MessageID.OK.value)
+                        case MessageID.PING.value:
+                            network_client.last_ping = time.time()
+                        case MessageID.DISCONNECT.value:
+                            client_id = msg.get("client_id")
+                            print(f"{self.PREFIX} Client ({client_id}) disconnected by itself.")
+                            self.purge_client(network_client)
+                            break
+                        case MessageID.EMPTY.value:
+                            print(f"{self.PREFIX} Client disconnected by itself.")
+                            self.purge_client(network_client)
+                            break
+                        case _:
+                            print(f"{self.PREFIX} Package \"{MessageID(msg.get('action'))}\" received!")
                 if network_client.last_ping + 10 < time.time():
                     network_client.send(MessageID.PING.value)
                     print(f"Ping {network_client.client_id}")
