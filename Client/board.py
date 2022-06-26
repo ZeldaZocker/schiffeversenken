@@ -96,8 +96,12 @@ class GameBoard():
                 ship = Ship(ship_type)
                 self.set_random_ship_placement(ship)
                 self.ships.append(ship)
-        for ship in self.ships:
-            print(str(ship))
+        #for ship in self.ships:
+        #    print(str(ship))
+
+    def clear_board(self):
+        self.ships.clear()
+        self.fields.clear()
 
 
 

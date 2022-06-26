@@ -9,7 +9,11 @@ class NetworkClient:
     client_id = None
     last_ping = 0
 
-    def __init__(self, host = socket.gethostname(), port = 20550, client_socket = None, client_id = None):
+    def __init__(self,
+                 host=socket.gethostbyname(socket.gethostname()),
+                 port=20550,
+                 client_socket=None,
+                 client_id=None):
         if not client_socket:
             self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.host = host
@@ -24,9 +28,8 @@ class NetworkClient:
             self.is_connected = True
             self.last_ping = time.time()
         if client_id:
-            self.client_id = client_id            
+            self.client_id = client_id
         self.client.settimeout(30)
-        
 
     def connect(self):
         self.client.settimeout(3)
@@ -37,7 +40,7 @@ class NetworkClient:
             print("[NETWORK]", e)
         self.client.settimeout(30)
 
-    def send(self, action, client_id = None, payload = None):
+    def send(self, action, client_id=None, payload=None):
         try:
             msg = {"action": action}
             if client_id:
@@ -48,7 +51,7 @@ class NetworkClient:
         except socket.error as e:
             print(e)
 
-    def recv(self, size = 2048):
+    def recv(self, size=2048):
         msg = self.client.recv(size).decode()
         val = {"action": MessageID.FAIL.value}
         if not msg: return {"action": MessageID.EMPTY.value}
@@ -77,6 +80,7 @@ class MessageID(Enum):
     GAME_OVER = auto()
     PING = auto()
     PRINT = auto()
+    BOARD = auto()
     START_PLACE_PHASE = auto()
     END_PLACE_PHASE = auto()
     YOUR_TURN = auto()

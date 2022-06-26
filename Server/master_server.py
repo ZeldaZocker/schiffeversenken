@@ -40,17 +40,22 @@ class MasterServer():
         self.mainloop()
 
     def mainloop(self):
-        while 1:
-            print(self.PREFIX, len(self.connected_clients), len(self.client_queue))
+        while self.is_running:
+            #print(self.PREFIX, len(self.connected_clients), len(self.client_queue))
             if len(self.client_queue) >= self.PLAYERS_TO_START_GAMESERVER:
                 addr = self.initGameServer()
                 for i in range(self.PLAYERS_TO_START_GAMESERVER):
                     network_client = self.client_queue.pop(0)
+                    print(f"{self.PREFIX} Send client to gameserver")
                     network_client.send(MessageID.GAMESERVER.value, payload=addr)
                     try:
                         network_client.client.close()
                     except:
                         pass
+            for game_server in self.game_servers:
+                if game_server.is_closeable:
+                    self.game_servers.remove(game_server)
+                    del(game_server)
             time.sleep(2)
 
     def accept_new_connections(self):
@@ -138,7 +143,7 @@ class MasterServer():
 
     def initGameServer(self):
         port = random.randint(20560, 20999)
-        host = socket.gethostname()
+        host = socket.gethostbyname(socket.gethostname())
         addr = (host, port)
         game_server = GameServer(addr)
         Thread(target=game_server.start, daemon=True, args=()).start()
@@ -162,6 +167,6 @@ class MasterServer():
 
 
 if __name__ == '__main__':
-    master = MasterServer(socket.gethostname(), 20550)
+    master = MasterServer(socket.gethostbyname(socket.gethostname()), 20550)
     signal.signal(signal.SIGINT, master.signal_handler)
     master.start()

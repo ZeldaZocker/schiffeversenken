@@ -10,157 +10,8 @@ import signal
 
 from network import NetworkClient
 from network import MessageID
-from board import *
+from window import GameWindow
 
-from tkinter import *
-from tkinter import messagebox
-
-class GameWindow(Thread):
-    is_destroyed = False
-    DEFAULT_BG = "#404040"
-
-    def __init__(self, client):
-        Thread.__init__(self)
-        self.client = client
-        self.own_buttons = {}
-        self.enemy_buttons = {}
-    
-    def run(self):
-        self.root = Tk()
-        self.root.title("Schiffe Versenken von Noah")
-        self.root.geometry(f"{620*2+70}x680")
-        self.root.resizable(False, False)
-        self.root.protocol("WM_DELETE_WINDOW", self.quit)
-        self.root.configure(bg=self.DEFAULT_BG)
-
-        self.button_frame = Frame(self.root, width=60*8, height=40, highlightbackground="red", highlightthickness=2, bg=self.DEFAULT_BG)
-        self.button_frame.grid(row=0, column=0, columnspan=3)
-        self.button_frame.grid_propagate(False)
-        
-        self.button_frame.columnconfigure(0, weight=1, pad=30)
-        self.button_frame.rowconfigure(0,weight=1, pad=30)
-
-        text_frame = Frame(self.root, width=60*8, height=20, bg=self.DEFAULT_BG)
-        text_frame.grid(row=1, column=0, columnspan=3)
-        text_frame.grid_propagate(False)
-        
-        text_frame.columnconfigure(0, weight=1, pad=30)
-        text_frame.rowconfigure(0,weight=1, pad=30)
-
-        self.text = Label(text_frame, text="You're not supposed to see this!", font='Helvetica 9 bold', fg="red", bg=self.DEFAULT_BG)
-
-        btnString = StringVar(self.button_frame, "Join Server")
-        self.join_server_button = Button(self.button_frame, bg="gray", textvariable=btnString, command=self.join_server_btn)
-        self.join_server_button.grid(sticky="wens")
-        self.join_server_button.grid_remove()
-
-        btnString = StringVar(self.button_frame, "Join Queue")
-        self.join_queue_button = Button(self.button_frame, bg="gray", textvariable=btnString, command=self.join_queue_btn)
-        self.join_queue_button.grid(sticky="wens")
-        self.join_queue_button.grid_remove()
-
-        btnString = StringVar(self.button_frame, "Leave Queue")
-        self.leave_queue_button = Button(self.button_frame, bg="gray", textvariable=btnString, command=self.leave_queue_btn)
-        self.leave_queue_button.grid(sticky="wens")
-        self.leave_queue_button.grid_remove()
-
-        self.join_server_button.grid()
-
-
-               
-        spacer = Frame(self.root, width=70, height=60, highlightbackground="yellow", highlightthickness=4, bg=self.DEFAULT_BG).grid(row=0, column=1, rowspan=3)
-
-        
-
-        button_list = []
-        z = 0
-        self.enemy_board_frame = Frame(self.root, width=620, height=620, highlightbackground="red", highlightthickness=2)
-        self.enemy_board_frame.grid_propagate(False)
-        self.enemy_board_frame.grid(row=2, column=0, padx=0, pady=0)
-
-        for y in range(10):
-            for x in range(10):
-                btnString = StringVar(self.enemy_board_frame, f"{x} {y}")
-                frame = Frame(self.enemy_board_frame, width=60, height=60, highlightbackground="blue", highlightthickness=2)
-                frame.grid_propagate(False)
-                frame.columnconfigure(0, weight=1, pad=30)
-                frame.rowconfigure(0,weight=1, pad=30)
-                frame.grid(row=y, column=x, padx=1, pady=1)
-
-                cmd = lambda x=x, y=y: client.shoot(x,y)
-                #print(x,y)
-                btn = Button(frame, bg="#33ccff", textvariable=btnString, command=cmd)
-                self.enemy_buttons[(x,y)] = btn
-                btn.grid(sticky="wens")
-                #btn.grid(row=i, column=z)
-                button_list.append(btn)
-        #self.board_frame.grid_remove()
-
-        button_list = []
-        z = 0
-        self.own_board_frame = Frame(self.root, width=620, height=620, highlightbackground="red", highlightthickness=2)
-        self.own_board_frame.grid_propagate(False)
-        self.own_board_frame.grid(row=2, column=2, padx=0, pady=0)
-
-        for y in range(10):
-            for x in range(10):
-                btnString = StringVar(self.own_board_frame, f"{x} {y}")
-                frame = Frame(self.own_board_frame, width=60, height=60, highlightbackground="blue", highlightthickness=2)
-                frame.grid_propagate(False)
-                frame.columnconfigure(0, weight=1, pad=30)
-                frame.rowconfigure(0,weight=1, pad=30)
-                frame.grid(row=y, column=x, padx=1, pady=1)
-
-                cmd = lambda x=x, y=y: client.shoot(x,y)
-                #print(x,y)
-                btn = Button(frame, bg="#33ccff", textvariable=btnString, state = DISABLED)
-                self.own_buttons[(x,y)] = btn
-                btn.grid(sticky="wens")
-                #btn.grid(row=i, column=z)
-                button_list.append(btn)
-        #self.board_frame.grid_remove()
-
-        board = GameBoard()
-        board.gernerate_board()
-
-        for ship in board.ships:
-            print(f"Enable button on {ship.ship_type}")
-            for ship_field in ship.fields:
-                print(f"Enable button on {ship_field.x} {ship_field.y}")
-                self.own_buttons[(ship_field.x, ship_field.y)].configure(bg="#FF0000")
-                self.own_buttons[(ship_field.x, ship_field.y)].grid()
-
-        self.root.mainloop()
-
-    def join_server_btn(self):
-        if not self.client.connect_to_master():
-            self.text.config(text="Error connecting to server!", fg="red")
-            self.text.pack()
-            return
-        thr = Thread(target=self.client.handle_message, args=())
-        thr.start()
-        self.join_server_button.grid_remove()
-        self.join_queue_button.grid()
-        self.text.config(text="Joined server.", fg="green")
-        self.text.pack()
-        
-    def join_queue_btn(self):
-        if not self.client.join_queue():
-            self.text.config(text="Error joining queue!", fg="red")
-            self.text.pack()
-            return
-        self.text.config(text="Joined queue.", fg="green")
-        self.text.pack()
-        self.join_queue_button.grid_remove()
-        self.leave_queue_button.grid()
-
-    def leave_queue_btn(self):
-        pass
-
-    def quit(self):
-        self.root.quit()
-        self.is_destroyed = True
-        self.client.is_running = False
 
 
 class Client():
@@ -169,6 +20,7 @@ class Client():
     is_running = False
     joined_queue = False
     game_window = None
+    is_ingame = False
 
     def start(self):
         self.is_running = True
@@ -176,7 +28,7 @@ class Client():
             time.sleep(1)
 
     def connect_to_master(self):
-        self.network_client = NetworkClient(socket.gethostname(), 20550)
+        self.network_client = NetworkClient(socket.gethostbyname(socket.gethostname()), 20550)
         self.network_client.connect()
         if not self.network_client.is_connected:
             print(f"{self.PREFIX} Error connecting to master server. (Step 1)")
@@ -208,8 +60,6 @@ class Client():
         return self.network_client.recv()
 
     def join_game_server(self, msg):
-        print("{self.PREFIX} FINALLY!!")
-        print(f"{self.PREFIX} payload: {msg.get('payload')}")
         self.network_client.send(MessageID.DISCONNECT.value, client_id=self.network_client.client_id)
         self.network_client.client.close()
         self.network_client = NetworkClient(msg.get('payload')[0], msg.get('payload')[1])
@@ -218,10 +68,13 @@ class Client():
         if not msg.get("action") == MessageID.OK.value:
             self.handle_failure("Error while joining game server.")
         self.network_client.client_id = msg.get('payload')
+        print(f"{self.PREFIX} Connected to gameserver!!")
+        self.is_ingame = True
 
     def handle_message(self):
         try:
             while self.network_client.is_connected and self.is_running:
+                print(f"{self.PREFIX} handle message loop")
                 msg = self.network_client.recv()
                 if not msg:
                     print(f"{self.PREFIX} Server gone?")
@@ -235,12 +88,13 @@ class Client():
                         print(f"{self.PREFIX} Pong {self.network_client.client_id}")
                     case MessageID.GAMESERVER.value:
                         self.join_game_server(msg)
-                        break
                     case MessageID.ADD_QUEUE.value:
                         self.joined_queue = True
                     case MessageID.EMPTY.value:
                             print(f"{self.PREFIX} Empty package case.")
                             self.handle_failure("Server gone. Purging.")
+                    case MessageID.DISCONNECT.value:
+                        self.handle_failure("Received disconnect package. Purging.")
                     case _:
                         print(f"{self.PREFIX} Package \"{MessageID(msg.get('action'))}\" received!")
                 if self.network_client.last_ping + 10 < time.time():
