@@ -56,7 +56,6 @@ class GameServer():
         print(f"{self.PREFIX} started client handle")
         try:
             while self.is_running:
-                print(f"{self.PREFIX} loop client handle")
                 msg = network_client.recv()
                 print(f"{self.PREFIX} Package \"{MessageID(msg.get('action'))}\" received!")
                 match msg.get("action"):
@@ -68,20 +67,28 @@ class GameServer():
                         self.purge_client(network_client)
                         break
                     case MessageID.SHOOT.value:
-                        pass
+                        for clnt in self.connected_clients:
+                            if clnt.client_id == network_client.client_id:
+                                continue
+                            clnt.send(MessageID.SHOOT.value, payload=msg.get('payload'))
                     case MessageID.SHOOT_RESULT.value:
-                        pass
-                    case MessageID.SHOOT.value:
-                        pass
+                        for clnt in self.connected_clients:
+                            if clnt.client_id == network_client.client_id:
+                                continue
+                            clnt.send(MessageID.SHOOT_RESULT.value, payload=msg.get('payload'))
                     case MessageID.EMPTY.value:
                         print(f"{self.PREFIX} Client disconnected by itself.")
                         self.purge_client(network_client)
                         break
+                    case MessageID.GAME_OVER.value:
+                        if clnt.client_id == network_client.client_id:
+                            continue
+                        clnt.send(MessageID.GAME_OVER.value)
                     case _:
                         print(f"{self.PREFIX} Package \"{MessageID(msg.get('action'))}\" received!")
                 if network_client.last_ping + 10 < time.time():
                     network_client.send(MessageID.OK.value)
-                    print(f"{self.PREFIX} Ping {network_client.client_id}")
+                    #print(f"{self.PREFIX} Ping {network_client.client_id}")
 
         except socket.error:
             print(f"{self.PREFIX} Client disconnected.")

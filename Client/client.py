@@ -11,6 +11,7 @@ import signal
 from network import NetworkClient
 from network import MessageID
 from window import GameWindow
+from board import GameBoard, FieldState
 
 
 
@@ -21,6 +22,7 @@ class Client():
     joined_queue = False
     game_window = None
     is_ingame = False
+    board = None
 
     def start(self):
         self.is_running = True
@@ -74,7 +76,6 @@ class Client():
     def handle_message(self):
         try:
             while self.network_client.is_connected and self.is_running:
-                print(f"{self.PREFIX} handle message loop")
                 msg = self.network_client.recv()
                 if not msg:
                     print(f"{self.PREFIX} Server gone?")
@@ -85,7 +86,7 @@ class Client():
                     case MessageID.PING.value:
                         self.network_client.last_ping = time.time()
                         self.network_client.send(MessageID.PING.value)
-                        print(f"{self.PREFIX} Pong {self.network_client.client_id}")
+                        #print(f"{self.PREFIX} Pong {self.network_client.client_id}")
                     case MessageID.GAMESERVER.value:
                         self.join_game_server(msg)
                     case MessageID.ADD_QUEUE.value:
@@ -95,6 +96,25 @@ class Client():
                             self.handle_failure("Server gone. Purging.")
                     case MessageID.DISCONNECT.value:
                         self.handle_failure("Received disconnect package. Purging.")
+                    case MessageID.SHOOT.value:
+                        x = msg.get("payload").get("x")
+                        y = msg.get("payload").get("y")
+                        ship_hit = False
+                        for ship in self.board.ships:
+                            if ship_hit: break
+                            for field in ship.fields:
+                                if ship_hit: break
+                                if field.x == x and field.y == y:
+                                    self.network_client.send(MessageID.SHOOT_RESULT.value, payload={"result": FieldState.SHIP.value})
+                                    ship_hit = True
+                                    break
+                        if not ship_hit:
+                            self.network_client.send(MessageID.SHOOT_RESULT.value, payload={"result": FieldState.SHOT.value})
+                    case MessageID.SHOOT_RESULT.value:
+                        result = msg.get("payload").get("result")
+                        if result == FieldState.SHIP.value:
+                            print(f"{self.PREFIX} Ship hit. Yeah!")
+                            # TODO: Logic
                     case _:
                         print(f"{self.PREFIX} Package \"{MessageID(msg.get('action'))}\" received!")
                 if self.network_client.last_ping + 10 < time.time():
@@ -117,7 +137,7 @@ class Client():
 
     def purge_client(self):
         try:
-            self.network_client.send(MessageID.DISCONNECT)
+            self.network_client.send(MessageID.DISCONNECT.value)
         except:
             pass
         try:
@@ -132,8 +152,14 @@ class Client():
         self.game_window.quit()
         sys.exit(0)
 
+    def generate_board(self):
+        self.board = GameBoard()
+        self.board.clear_board()
+        self.board.gernerate_board()
+
     def shoot(self, x, y):
         print(f"Shooting: {x} {y}")
+        self.network_client.send(MessageID.SHOOT.value, payload={"x": x, "y": y})
 
     
 

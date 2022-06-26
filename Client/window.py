@@ -185,13 +185,11 @@ class GameWindow(Thread):
             time.sleep(1)
 
     def generate_board(self):
-        board = GameBoard()
-        board.clear_board()
-        board.gernerate_board()
         for _, btn in self.own_buttons.items():
             btn.configure(bg="gray")
 
-        for ship in board.ships:
+        self.client.generate_board()
+        for ship in self.client.board.ships:
             for ship_field in ship.fields:
                 self.own_buttons[(ship_field.x,
                                   ship_field.y)].configure(bg="#FF0000")
