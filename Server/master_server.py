@@ -108,7 +108,7 @@ class MasterServer():
                 if network_client.last_ping + 10 < time.time():
                     network_client.send(MessageID.PING.value)
                     print(f"Ping {network_client.client_id}")
-                time.sleep(0.1)
+                time.sleep(0.05)
         except socket.error:
             print(f"{self.PREFIX} Client disconnected.")
             self.purge_client(network_client)
