@@ -6,11 +6,13 @@ from network import NetworkClient
 from threading import Thread
 import uuid
 
+HOST = "192.168.178.21"
+PORT = 25699
 
 class GameServer():
     connected_clients = []
     PREFIX = "[GAME]"
-
+    
     def __init__(self, addr):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server = addr[0]
@@ -136,5 +138,5 @@ class GameServer():
             self.is_closeable = True
         
 if __name__ == "__main__":
-    server = GameServer((socket.gethostbyname(socket.gethostname()), 25699))
+    server = GameServer((HOST, PORT))
     server.start()

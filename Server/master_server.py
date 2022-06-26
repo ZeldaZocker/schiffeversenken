@@ -12,7 +12,8 @@ import json
 import time
 import uuid
 
-
+HOST = "192.168.178.21"
+PORT = 20550
 
 class MasterServer():
     connected_clients = []
@@ -144,7 +145,7 @@ class MasterServer():
 
     def initGameServer(self):
         port = random.randint(20560, 20999)
-        host = socket.gethostbyname(socket.gethostname())
+        host = HOST
         addr = (host, port)
         game_server = GameServer(addr)
         Thread(target=game_server.start, daemon=True, args=()).start()
@@ -168,6 +169,6 @@ class MasterServer():
 
 
 if __name__ == '__main__':
-    master = MasterServer(socket.gethostbyname(socket.gethostname()), 20550)
+    master = MasterServer(HOST, PORT)
     signal.signal(signal.SIGINT, master.signal_handler)
     master.start()

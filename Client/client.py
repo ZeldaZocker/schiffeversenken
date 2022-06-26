@@ -23,6 +23,8 @@ class Client():
     game_window = None
     is_ingame = False
     board = None
+    HOST = "192.168.178.21"
+    PORT = 20550
 
     def start(self):
         self.is_running = True
@@ -30,7 +32,7 @@ class Client():
             time.sleep(1)
 
     def connect_to_master(self):
-        self.network_client = NetworkClient(socket.gethostbyname(socket.gethostname()), 20550)
+        self.network_client = NetworkClient(self.HOST, self.PORT)
         self.network_client.connect()
         if not self.network_client.is_connected:
             print(f"{self.PREFIX} Error connecting to master server. (Step 1)")

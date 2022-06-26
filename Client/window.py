@@ -95,7 +95,8 @@ class GameWindow(Thread):
                 btn = Button(frame,
                              bg="gray",
                              textvariable=btnString,
-                             command=cmd)
+                             command=cmd,
+                             state=DISABLED)
                 self.enemy_buttons[(x, y)] = btn
                 btn.grid(sticky="wens")
                 #btn.grid(row=i, column=z)
