@@ -27,13 +27,13 @@ class GameWindow(Thread):
                                   width=60 * 8,
                                   height=40,
                                   highlightbackground="red",
-                                  highlightthickness=2,
+                                  highlightthickness=0,
                                   bg=self.DEFAULT_BG)
         self.button_frame.grid(row=0, column=0, columnspan=3)
         self.button_frame.grid_propagate(False)
 
-        self.button_frame.columnconfigure(0, weight=1, pad=30)
-        self.button_frame.rowconfigure(0, weight=1, pad=30)
+        self.button_frame.columnconfigure(0, weight=1)
+        self.button_frame.rowconfigure(0, weight=1)
 
         text_frame = Frame(self.root,
                            width=60 * 8,
@@ -42,8 +42,8 @@ class GameWindow(Thread):
         text_frame.grid(row=1, column=0, columnspan=3)
         text_frame.grid_propagate(False)
 
-        text_frame.columnconfigure(0, weight=1, pad=30)
-        text_frame.rowconfigure(0, weight=1, pad=30)
+        text_frame.columnconfigure(0, weight=1)
+        text_frame.rowconfigure(0, weight=1)
 
         self.text = Label(text_frame,
                           text="You're not supposed to see this!",
@@ -70,10 +70,11 @@ class GameWindow(Thread):
         self.enemy_board_frame = Frame(self.root,
                                        width=620,
                                        height=620,
+                                       bg=self.DEFAULT_BG,
                                        highlightbackground="red",
-                                       highlightthickness=2)
+                                       highlightthickness=0)
         self.enemy_board_frame.grid_propagate(False)
-        self.enemy_board_frame.grid(row=2, column=0, padx=0, pady=0)
+        self.enemy_board_frame.grid(row=2, column=0)
 
         for y in range(10):
             for x in range(10):
@@ -81,17 +82,18 @@ class GameWindow(Thread):
                 frame = Frame(self.enemy_board_frame,
                               width=60,
                               height=60,
+                              bg=self.DEFAULT_BG,
                               highlightbackground="blue",
-                              highlightthickness=2)
+                              highlightthickness=0)
                 frame.grid_propagate(False)
-                frame.columnconfigure(0, weight=1, pad=30)
-                frame.rowconfigure(0, weight=1, pad=30)
+                frame.columnconfigure(0, weight=1)
+                frame.rowconfigure(0, weight=1)
                 frame.grid(row=y, column=x, padx=1, pady=1)
 
                 cmd = lambda x=x, y=y: self.client.shoot(x, y)
                 #print(x,y)
                 btn = Button(frame,
-                             bg="#33ccff",
+                             bg="gray",
                              textvariable=btnString,
                              command=cmd)
                 self.enemy_buttons[(x, y)] = btn
@@ -106,9 +108,9 @@ class GameWindow(Thread):
                                      width=620,
                                      height=620,
                                      highlightbackground="red",
-                                     highlightthickness=2)
+                                     highlightthickness=0)
         self.own_board_frame.grid_propagate(False)
-        self.own_board_frame.grid(row=2, column=2, padx=0, pady=0)
+        self.own_board_frame.grid(row=2, column=2)
 
         for y in range(10):
             for x in range(10):
@@ -117,16 +119,16 @@ class GameWindow(Thread):
                               width=60,
                               height=60,
                               highlightbackground="blue",
-                              highlightthickness=2)
+                              highlightthickness=0)
                 frame.grid_propagate(False)
-                frame.columnconfigure(0, weight=1, pad=30)
-                frame.rowconfigure(0, weight=1, pad=30)
+                frame.columnconfigure(0, weight=1)
+                frame.rowconfigure(0, weight=1)
                 frame.grid(row=y, column=x, padx=1, pady=1)
 
                 cmd = lambda x=x, y=y: self.client.shoot(x, y)
                 #print(x,y)
                 btn = Button(frame,
-                             bg="#33ccff",
+                             bg="gray",
                              textvariable=btnString,
                              state=DISABLED)
                 self.own_buttons[(x, y)] = btn
@@ -190,9 +192,10 @@ class GameWindow(Thread):
 
         self.client.generate_board()
         for ship in self.client.board.ships:
+            color = ship.ship_type.get_color()
             for ship_field in ship.fields:
                 self.own_buttons[(ship_field.x,
-                                  ship_field.y)].configure(bg="#FF0000")
+                                  ship_field.y)].configure(bg=color)
                 self.own_buttons[(ship_field.x, ship_field.y)].grid()
 
     def quit(self):
