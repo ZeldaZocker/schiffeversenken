@@ -19,6 +19,14 @@
             "program": "${workspaceFolder}${pathSeparator}client${pathSeparator}client.py",
             "console": "integratedTerminal",
             "justMyCode": true
+        },
+        {
+            "name": "Client2",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}${pathSeparator}client${pathSeparator}client.py",
+            "console": "integratedTerminal",
+            "justMyCode": true
         }
     ],
     "compounds": [
@@ -27,7 +35,7 @@
             "configurations": [
                 "Server",
                 "Client",
-                "Client"
+                "Client2"
             ],
             "stopAll": true
         }
