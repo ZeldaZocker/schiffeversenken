@@ -22,9 +22,12 @@ class Client():
     joined_queue = False
     game_window = None
     is_ingame = False
+    game_started = False
+    my_turn = False
     board = None
     HOST = "192.168.178.21"
     PORT = 20550
+    time_until_start = 15
 
     def start(self):
         self.is_running = True
@@ -85,7 +88,8 @@ class Client():
                         print(f"{self.PREFIX} Server gone?")
                         self.network_client.client.close()
                         return
-                    print(f"{self.PREFIX} \"{MessageID(msg.get('action'))}\" received!")
+                    if not msg.get('action') == MessageID.PING.value:
+                        print(f"{self.PREFIX} \"{MessageID(msg.get('action'))}\" received!")
                     match msg.get("action"):
                         case MessageID.PING.value:
                             self.network_client.last_ping = time.time()
@@ -103,22 +107,38 @@ class Client():
                         case MessageID.SHOOT.value:
                             x = msg.get("payload").get("x")
                             y = msg.get("payload").get("y")
+                            if x == -1 and y == -1:
+                                self.my_turn = True
+                                print("I have the starting turn.")
+                                continue
                             ship_hit = False
                             for ship in self.board.ships:
                                 if ship_hit: break
                                 for field in ship.fields:
                                     if ship_hit: break
                                     if field.x == x and field.y == y:
-                                        self.network_client.send(MessageID.SHOOT_RESULT.value, payload={"result": FieldState.SHIP.value})
+                                        self.network_client.send(MessageID.SHOOT_RESULT.value, payload={"result": FieldState.SHIP.value, "x":x,"y":y})
+                                        game_window.own_buttons[(x,y)].configure(image=game_window.image_hit)
                                         ship_hit = True
                                         break
                             if not ship_hit:
-                                self.network_client.send(MessageID.SHOOT_RESULT.value, payload={"result": FieldState.SHOT.value})
+                                self.network_client.send(MessageID.SHOOT_RESULT.value, payload={"result": FieldState.SHOT.value, "x":x,"y":y})
+                                self.game_window.own_buttons[(x,y)].configure(image=game_window.image_miss)
+                            self.my_turn = True
                         case MessageID.SHOOT_RESULT.value:
                             result = msg.get("payload").get("result")
+                            x = msg.get("payload").get("x")
+                            y = msg.get("payload").get("y")
                             if result == FieldState.SHIP.value:
                                 print(f"{self.PREFIX} Ship hit. Yeah!")
-                                # TODO: Logic
+                                game_window.enemy_buttons[(x,y)].configure(image=game_window.image_hit)
+                            else:
+                                print(f"{self.PREFIX} Ship missed. Sadge!")
+                                game_window.enemy_buttons[(x,y)].configure(image=game_window.image_miss)
+                        case MessageID.TIME_LEFT.value:
+                            self.time_until_start = msg.get("payload").get("time")
+                        case MessageID.END_PLACE_PHASE.value:
+                            self.game_started = True
                         case _:
                             print(f"{self.PREFIX} Package \"{MessageID(msg.get('action'))}\" received!")
                 if self.network_client.last_ping + 10 < time.time():
@@ -162,8 +182,13 @@ class Client():
         self.board.gernerate_board()
 
     def shoot(self, x, y):
+        if not self.my_turn: return
         print(f"Shooting: {x} {y}")
+        self.my_turn = False
+        self.game_window.disable_buttons()
+        del(self.game_window.enemy_untested_buttons[(x,y)])
         self.network_client.send(MessageID.SHOOT.value, payload={"x": x, "y": y})
+        
 
     
 

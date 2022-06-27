@@ -41,14 +41,14 @@ class GameServer():
                 print(f"{self.PREFIX} Socket error. Server closing?")
                 return
             time.sleep(1)
-            if len(self.connected_clients) > 2: #TODO
+            if len(self.connected_clients) == 2:
                 self.start_game()
 
     def ping_clients(self):
         while self.is_running:
             for client in self.connected_clients:
                 try:
-                    print(f"{self.PREFIX} Ping {client.client_id}")
+                    #print(f"{self.PREFIX} Ping {client.client_id}")
                     client.send(MessageID.PING.value)
                 except socket.error as e:
                     print(e)
@@ -60,7 +60,8 @@ class GameServer():
             while self.is_running:
                 msgs = network_client.recv()#
                 for msg in msgs:
-                    print(f"{self.PREFIX} Package \"{MessageID(msg.get('action'))}\" received!")
+                    if not msg.get('action') == MessageID.PING.value:
+                        print(f"{self.PREFIX} Package \"{MessageID(msg.get('action'))}\" received!")
                     match msg.get("action"):
                         case MessageID.PING.value:
                             network_client.last_ping = time.time()
@@ -112,10 +113,22 @@ class GameServer():
         except:
             pass
 
-    def start_game(self):
+    def start_game(self):  # TODO
         print(f"{self.PREFIX} Starting game...")
-        time.sleep(15)
-        sys.exit()
+        PREPARATION_TIME = 5
+        time_before = time.time()
+        while time.time() - time_before < PREPARATION_TIME:
+            time_elapsed = time.time() - time_before
+            time_remaining = int(PREPARATION_TIME - time_elapsed)
+            print(f"{self.PREFIX} Game starts in {time_remaining} seconds   ({PREPARATION_TIME - time_elapsed})")
+            for clnt in self.connected_clients:
+                clnt.send(MessageID.TIME_LEFT.value, payload={"time": time_remaining})
+            time.sleep(0.25)
+        print(f"{self.PREFIX} Preparation over")
+        clnt.send(MessageID.TIME_LEFT.value, payload={"time": 0})
+        
+        clnt.send(MessageID.END_PLACE_PHASE.value)
+        self.connected_clients[0].send(MessageID.SHOOT.value, payload={"x": -1,"y": -1})
 
     def stop(self):
         print(f"{self.PREFIX} Stopping game...")

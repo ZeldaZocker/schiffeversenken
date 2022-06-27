@@ -82,10 +82,10 @@ class MasterServer():
         print(f"{self.PREFIX} started client handle")
         try:
             while self.is_running:
-                print(f"{self.PREFIX} loop client handle")
                 msgs = network_client.recv()
                 for msg in msgs:
-                    print(f"{self.PREFIX} \"{MessageID(msg.get('action'))}\" received!")
+                    if not msg.get('action') == MessageID.PING.value:
+                        print(f"{self.PREFIX} \"{MessageID(msg.get('action'))}\" received!")
                     match msg.get("action"):
                         case MessageID.ADD_QUEUE.value:
                             print(f"{self.PREFIX} Adding client to queue")
@@ -109,7 +109,7 @@ class MasterServer():
                             print(f"{self.PREFIX} Package \"{MessageID(msg.get('action'))}\" received!")
                 if network_client.last_ping + 10 < time.time():
                     network_client.send(MessageID.PING.value)
-                    print(f"Ping {network_client.client_id}")
+                    #print(f"Ping {network_client.client_id}")
                 time.sleep(0.05)
         except socket.error:
             print(f"{self.PREFIX} Client disconnected.")
@@ -119,7 +119,7 @@ class MasterServer():
         while self.is_running:
             for client in self.connected_clients:
                 try:
-                    print(f"{self.PREFIX} Ping {client.client_id if client.client_id else 'Unknown ID'}")
+                    #print(f"{self.PREFIX} Ping {client.client_id if client.client_id else 'Unknown ID'}")
                     client.send(MessageID.PING.value)
                 except socket.error as e:
                     print(e)
@@ -150,6 +150,7 @@ class MasterServer():
         game_server = GameServer(addr)
         Thread(target=game_server.start, daemon=True, args=()).start()
         self.game_servers.append(game_server)
+        print(f"{self.PREFIX} Started game server on {host}:{port}")
         return addr
 
     def signal_handler(self, sig, frame):
