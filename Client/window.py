@@ -189,14 +189,17 @@ class GameWindow(Thread):
 
     def generate_board(self):
         for _, btn in self.own_buttons.items():
-            btn.configure(bg="gray")
+            btn.configure(bg="gray", image="")
+
+        photo = PhotoImage(file = r".\Client\ship_hit.png")
 
         self.client.generate_board()
         for ship in self.client.board.ships:
             color = ship.ship_type.get_color()
             for ship_field in ship.fields:
                 self.own_buttons[(ship_field.x,
-                                  ship_field.y)].configure(bg=color)
+                                  ship_field.y)].configure(bg=color, image=photo)
+                self.own_buttons[(ship_field.x, ship_field.y)].image = photo  # Needed to prevent garbage collection
                 self.own_buttons[(ship_field.x, ship_field.y)].grid()
 
     def quit(self):
