@@ -45,11 +45,11 @@ class ShipType(Enum):
     def get_color(self):
         match self:
             case ShipType.BATTLESHIP:
-                return "#CB1CFF"
+                return "#92109E"
             case ShipType.CRUISER:
-                return "#FA0400"
+                return "#00EBA1"
             case ShipType.DESTROYER:
-                return "#FA7911"
+                return "#EBA400"
             case _:
                 return "gray"
                 
