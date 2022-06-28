@@ -90,9 +90,10 @@ class GameServer():
                             self.purge_client(network_client)
                             break
                         case MessageID.GAME_OVER.value:
-                            if clnt.client_id == network_client.client_id:
-                                continue
-                            clnt.send(MessageID.GAME_OVER.value)
+                            for clnt in self.connected_clients:
+                                if clnt.client_id == network_client.client_id:
+                                    continue
+                                clnt.send(MessageID.GAME_OVER.value)
                         case _:
                             print(f"{self.PREFIX} Package \"{MessageID(msg.get('action'))}\" received!")
                 if network_client.last_ping + 10 < time.time():

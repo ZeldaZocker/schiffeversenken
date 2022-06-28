@@ -23,6 +23,7 @@ class Client():
     is_ingame = False
     game_started = False
     my_turn = False
+    game_over = False
     board = None
     HOST = "10.106.112.71"
     PORT = 20550
@@ -104,6 +105,7 @@ class Client():
                         case MessageID.DISCONNECT.value:
                             self.handle_failure("Received disconnect package. Purging.")
                         case MessageID.SHOOT.value:
+                            if self.game_over == True: return
                             x = msg.get("payload").get("x")
                             y = msg.get("payload").get("y")
                             if x == -1 and y == -1:
@@ -134,15 +136,18 @@ class Client():
                                             for fld in fields:
                                                 self.game_window.own_buttons[fld[0], fld[1]].configure(image=game_window.image_hit_gold)
 
-                                        # Check for all ships destoryes
+                                        # Check for all ships destoryed
                                         game_over = True
                                         for ship in self.board.ships:
+                                            print("Check ship for game over")
                                             if not ship.destroyed:
                                                 game_over = False
+                                                print("Game Over flag set to false")
                                                 break
                                         if game_over:
                                              self.network_client.send(MessageID.GAME_OVER.value)
                                              self.game_window.text.configure(text="You lost the game.", fg = "red")
+                                             self.game_over = True
                                         break
                             if not ship_hit:
                                 self.network_client.send(MessageID.SHOOT_RESULT.value, payload={"result": FieldState.SHOT.value, "x":x,"y":y})
@@ -171,6 +176,7 @@ class Client():
                             self.game_started = True
                         case MessageID.GAME_OVER.value:
                             self.game_window.text.configure(text="You won the game!", fg = "yellow")
+                            self.game_window.disable_buttons()
                         case _:
                             print(f"{self.PREFIX} Package \"{MessageID(msg.get('action'))}\" received!")
                 if self.network_client.last_ping + 10 < time.time():
