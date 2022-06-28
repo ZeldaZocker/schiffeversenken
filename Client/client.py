@@ -24,7 +24,7 @@ class Client():
     game_started = False
     my_turn = False
     board = None
-    HOST = "192.168.178.44"
+    HOST = "10.106.112.71"
     PORT = 20550
     time_until_start = 15
 
@@ -147,8 +147,8 @@ class Client():
                             if not ship_hit:
                                 self.network_client.send(MessageID.SHOOT_RESULT.value, payload={"result": FieldState.SHOT.value, "x":x,"y":y})
                                 self.game_window.own_buttons[(x,y)].configure(image=game_window.image_miss)
-                            if not game_over:
-                                self.my_turn = True
+                                if not game_over:
+                                    self.my_turn = True
                         case MessageID.SHOOT_RESULT.value:
                             result = msg.get("payload").get("result")
                             x = msg.get("payload").get("x")
@@ -156,6 +156,8 @@ class Client():
                             if result == FieldState.SHIP.value:
                                 print(f"{self.PREFIX} Ship hit. Yeah!")
                                 self.game_window.enemy_buttons[(x,y)].configure(image=game_window.image_hit)
+                                self.my_turn = True
+                                self.game_window.enable_buttons()
                             else:
                                 print(f"{self.PREFIX} Ship missed. Sadge!")
                                 self.game_window.enemy_buttons[(x,y)].configure(image=game_window.image_miss)

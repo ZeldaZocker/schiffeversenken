@@ -12,7 +12,7 @@ import json
 import time
 import uuid
 
-HOST = "192.168.178.44"   # "192.168.178.21"
+HOST = "10.106.112.71"   # "192.168.178.21"
 PORT = 20550
 
 class MasterServer():
