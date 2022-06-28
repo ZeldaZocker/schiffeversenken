@@ -12,7 +12,7 @@ import json
 import time
 import uuid
 
-HOST = "192.168.178.21"
+HOST = "192.168.178.44"   # "192.168.178.21"
 PORT = 20550
 
 class MasterServer():
@@ -34,6 +34,7 @@ class MasterServer():
         self.is_running = True
         self.socket.bind(self.addr)
         self.socket.listen(30)
+        print(f"{self.PREFIX} Started Master Server on {self.server}:{self.port}")
         self.connection_handle_thread = Thread(target=self.accept_new_connections, daemon=True, args=())
         self.connection_handle_thread.start()
         self.ping_thread = Thread(target=self.ping_clients, args=())

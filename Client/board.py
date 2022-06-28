@@ -3,20 +3,15 @@ from enum import Enum, auto
 import random
 
 
-class FieldState(Enum):
-    UNKNOWN = auto()
-    SHOT = auto()
-    SHIP = auto()
-
 
 class Field():
-    def __init__(self, x, y, state=FieldState.UNKNOWN):
-        self.state = state
+    def __init__(self, x, y, shot=False):
+        self.shot = shot
         self.x = x
         self.y = y
     
     def __str__(self):
-        return f"X: {self.x}  Y: {self.y}  State: {self.state.name}" 
+        return f"X: {self.x}  Y: {self.y}  State: {self.shot.name}" 
 
 
 class ShipType(Enum):
@@ -57,7 +52,7 @@ class ShipType(Enum):
 
 class Ship():
     def __init__(self, ship_type):
-        self.destroy = False
+        self.destroyed = False
         self.lenght = -1
         self.ship_type = None
         self.fields = []
@@ -65,7 +60,7 @@ class Ship():
         self.lenght = ship_type.get_lenght()
 
     def __str__(self):
-        return f"Ship Type: {self.ship_type}  Lenght: {self.lenght}  Destroyed: {self.destroy}  Fields: {[str(field) for field in self.fields]}"
+        return f"Ship Type: {self.ship_type}  Lenght: {self.lenght}  Destroyed: {self.destroyed}  Fields: {[str(field) for field in self.fields]}"
     
 
 
@@ -81,13 +76,13 @@ class GameBoard():
 
         if is_horizontal:
             for z in range(ship.lenght):
-                field = Field(safe_pos + z, other_pos, FieldState.SHIP)
+                field = Field(safe_pos + z, other_pos, False)
                 self.fields.append(field)
                 ship.fields.append(field)
 
         else:
             for z in range(ship.lenght):
-                field = Field(other_pos, safe_pos + z, FieldState.SHIP)
+                field = Field(other_pos, safe_pos + z, False)
                 self.fields.append(field)
                 ship.fields.append(field)
                 

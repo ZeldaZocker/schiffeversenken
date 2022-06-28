@@ -8,10 +8,9 @@ from threading import Thread
 import time
 import signal
 
-from network import NetworkClient
-from network import MessageID
+from network import NetworkClient, MessageID, FieldState
 from window import GameWindow
-from board import GameBoard, FieldState
+from board import GameBoard
 
 
 
@@ -25,7 +24,7 @@ class Client():
     game_started = False
     my_turn = False
     board = None
-    HOST = "192.168.178.21"
+    HOST = "192.168.178.44"
     PORT = 20550
     time_until_start = 15
 
@@ -111,34 +110,65 @@ class Client():
                                 self.my_turn = True
                                 print("I have the starting turn.")
                                 continue
+                            game_over = False
                             ship_hit = False
                             for ship in self.board.ships:
                                 if ship_hit: break
                                 for field in ship.fields:
                                     if ship_hit: break
                                     if field.x == x and field.y == y:
+                                        field.shot = True
                                         self.network_client.send(MessageID.SHOOT_RESULT.value, payload={"result": FieldState.SHIP.value, "x":x,"y":y})
                                         game_window.own_buttons[(x,y)].configure(image=game_window.image_hit)
                                         ship_hit = True
+                                        field_alive = False
+                                        fields = []
+                                        for field in ship.fields:
+                                            if not field.shot:
+                                                field_alive = True
+                                                break
+                                            fields.append((field.x, field.y))
+                                        if not field_alive:
+                                            self.network_client.send(MessageID.SHIP_SUNK.value, payload={"fields": fields})
+                                            ship.destroyed = True
+                                            for fld in fields:
+                                                self.game_window.own_buttons[fld[0], fld[1]].configure(image=game_window.image_hit_gold)
+
+                                        # Check for all ships destoryes
+                                        game_over = True
+                                        for ship in self.board.ships:
+                                            if not ship.destroyed:
+                                                game_over = False
+                                                break
+                                        if game_over:
+                                             self.network_client.send(MessageID.GAME_OVER.value)
+                                             self.game_window.text.configure(text="You lost the game.", fg = "red")
                                         break
                             if not ship_hit:
                                 self.network_client.send(MessageID.SHOOT_RESULT.value, payload={"result": FieldState.SHOT.value, "x":x,"y":y})
                                 self.game_window.own_buttons[(x,y)].configure(image=game_window.image_miss)
-                            self.my_turn = True
+                            if not game_over:
+                                self.my_turn = True
                         case MessageID.SHOOT_RESULT.value:
                             result = msg.get("payload").get("result")
                             x = msg.get("payload").get("x")
                             y = msg.get("payload").get("y")
                             if result == FieldState.SHIP.value:
                                 print(f"{self.PREFIX} Ship hit. Yeah!")
-                                game_window.enemy_buttons[(x,y)].configure(image=game_window.image_hit)
+                                self.game_window.enemy_buttons[(x,y)].configure(image=game_window.image_hit)
                             else:
                                 print(f"{self.PREFIX} Ship missed. Sadge!")
-                                game_window.enemy_buttons[(x,y)].configure(image=game_window.image_miss)
+                                self.game_window.enemy_buttons[(x,y)].configure(image=game_window.image_miss)
+                        case MessageID.SHIP_SUNK.value:
+                            print(msg.get("payload").get("fields"))
+                            for field in msg.get("payload").get("fields"):
+                                self.game_window.enemy_buttons[(field[0],field[1])].configure(image=game_window.image_hit_gold)
                         case MessageID.TIME_LEFT.value:
                             self.time_until_start = msg.get("payload").get("time")
                         case MessageID.END_PLACE_PHASE.value:
                             self.game_started = True
+                        case MessageID.GAME_OVER.value:
+                            self.game_window.text.configure(text="You won the game!", fg = "yellow")
                         case _:
                             print(f"{self.PREFIX} Package \"{MessageID(msg.get('action'))}\" received!")
                 if self.network_client.last_ping + 10 < time.time():

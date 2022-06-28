@@ -124,3 +124,7 @@ class MessageID(Enum):
     END_PLACE_PHASE = auto()
     YOUR_TURN = auto()
     EMPTY = auto()
+
+class FieldState(Enum):
+    SHOT = auto()
+    SHIP = auto()

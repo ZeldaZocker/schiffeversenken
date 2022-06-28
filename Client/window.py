@@ -25,6 +25,7 @@ class GameWindow(Thread):
         self.root.configure(bg=self.DEFAULT_BG)
 
         self.image_hit = PhotoImage(file=r".\Client\ship_hit.png")
+        self.image_hit_gold = PhotoImage(file=r".\Client\ship_hit_gold.png")
         self.image_miss = PhotoImage(file=r".\Client\ship_miss.png")
 
         self.button_frame = Frame(self.root,
@@ -64,7 +65,9 @@ class GameWindow(Thread):
 
         # Prevent garbage collection for graphics
         self.button.image_hit = PhotoImage(file=r".\Client\ship_hit.png")
+        self.button.image_hit_gold = PhotoImage(file=r".\Client\ship_hit_gold.png")
         self.button.image_miss = PhotoImage(file=r".\Client\ship_miss.png")
+
 
         spacer = Frame(self.root,
                        width=20,

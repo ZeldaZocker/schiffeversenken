@@ -80,6 +80,11 @@ class GameServer():
                                 if clnt.client_id == network_client.client_id:
                                     continue
                                 clnt.send(MessageID.SHOOT_RESULT.value, payload=msg.get('payload'))
+                        case MessageID.SHIP_SUNK.value:
+                            for clnt in self.connected_clients:
+                                if clnt.client_id == network_client.client_id:
+                                    continue
+                                clnt.send(MessageID.SHIP_SUNK.value, payload=msg.get('payload'))
                         case MessageID.EMPTY.value:
                             print(f"{self.PREFIX} Client disconnected by itself.")
                             self.purge_client(network_client)
